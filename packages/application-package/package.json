@@ -1,0 +1,40 @@
+{
+  "name": "@viz/application-package", 
+  "version": "0.0.1",
+  "description": "viz application package API.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT", 
+  "files": [
+    "lib",
+    "src"
+  ],
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "scripts": {
+    "prepare": "yarn run clean && yarn run build",
+    "clean": "vizext clean",
+    "build": "vizext build",
+    "watch": "vizext watch",
+    "test": "vizext test",
+    "docs": "vizext docs"
+  },
+  "dependencies": {
+    "@types/fs-extra": "^4.0.2",
+    "@types/request": "^2.0.3",
+    "@types/semver": "^5.4.0",
+    "@types/write-json-file": "^3.2.1", 
+    "changes-stream": "^2.2.0", 
+    "electron": "15.3.6",
+    "electron-rebuild": "^3.2.7", 
+    "request": "^2.82.0",  
+    "fs-extra": "^4.0.2",
+    "write-json-file":"^5.0.0",
+    "deepmerge": "^4.2.2", 
+    "is-electron": "^2.1.0" 
+  },
+  "devDependencies": {
+    "@viz/build-scripts": "^0.0.1"
+  }
+}

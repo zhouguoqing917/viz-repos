@@ -1,0 +1,35 @@
+{ 
+  "name": "@viz/example-browser",
+  "version": "0.0.1",
+  "license": "MIT",
+  "theia": {
+    "frontend": {
+      "config": {
+        "applicationName": " Browser Example",
+        "preferences": {
+          "files.enableTrash": false
+        }
+      }
+    }
+  },
+  "dependencies": { 
+    "@viz/core": "0.0.1" 
+  },
+  "scripts": {  
+    "compile": "yarn compile:tsc", 
+    "compile:tsc": "tsc -b", 
+    "build": "yarn compile && yarn bundle", 
+    "build:test": "tsc --build tsconfig.test.json",
+    "clean": "rimraf lib && rimraf tsconfig.tsbuildinfo",
+    "docs": "typedoc src",
+    "test": "jest",
+    "test:cov": "jest --collect-coverage",
+    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
+    "test:debug:watch": "node --inspect-brk node_modules/.bin/jest --runInBand --watch",
+    "watch": "tsc -b --watch"
+
+  },
+  "devDependencies": {
+    "@viz/build-scripts": "0.0.1"
+  }
+}

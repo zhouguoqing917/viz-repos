@@ -1,0 +1,15 @@
+{
+  "extends": "../../configs/base.tsconfig",
+  "include": [],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../packages/cli"
+    },
+    {
+      "path": "../../packages/core"
+    },
+  ]
+}

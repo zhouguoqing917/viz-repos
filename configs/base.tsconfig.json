@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "composite": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true, 
+    "esModuleInterop": true,
+    "incremental": true,
+    "noImplicitAny": true,
+    "noEmitOnError": false,
+    "noImplicitThis": true,
+    "noUnusedLocals": false,
+    "preserveWatchOutput": true,
+    "strictNullChecks": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "downlevelIteration": true,
+    "resolveJsonModule": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "target": "ES2017",
+    "jsx": "react", 
+    "types": [],
+    "lib": [
+      "ES2017",
+      "dom"
+    ],
+    "sourceMap": true
+  }
+}
+ 
