@@ -1,4 +1,5 @@
 import { interfaces } from 'inversify';
+import { ContributionFilterRegistry } from './contribution-filter';
 
 export const ContributionProvider = Symbol('ContributionProvider');
 
@@ -22,6 +23,7 @@ class ContainerBasedContributionProvider<T extends object> implements Contributi
     getContributions(recursive?: boolean): T[] {
         if (this.services === undefined) {
             const currentServices: T[] = [];
+            let filterRegistry: ContributionFilterRegistry | undefined;
             let currentContainer: interfaces.Container | null = this.container; 
             while (currentContainer !== null) {
                 if (currentContainer.isBound(this.serviceIdentifier)) {
@@ -31,9 +33,12 @@ class ContainerBasedContributionProvider<T extends object> implements Contributi
                         console.error(error);
                     }
                 }
+                if (filterRegistry === undefined && currentContainer.isBound(ContributionFilterRegistry)) {
+                    filterRegistry = currentContainer.get(ContributionFilterRegistry);
+                }
                 currentContainer = recursive === true ? currentContainer.parent : null;
-            }
-            this.services = currentServices;
+            } 
+            this.services = filterRegistry ? filterRegistry.applyFilters(currentServices, this.serviceIdentifier) : currentServices;
         }
         return this.services;
     }
@@ -54,4 +59,18 @@ export function bindContributionProvider(bindable: Bindable, id: symbol): void {
     bindingToSyntax
         .toDynamicValue(ctx => new ContainerBasedContributionProvider(id, ctx.container))
         .inSingletonScope().whenTargetNamed(id);
+}
+ 
+/**
+ * Helper function to bind a service to a list of contributions easily.
+ * @param bindable a Container or the bind function directly.
+ * @param service an already bound service to refer the contributions to.
+ * @param contributions array of contribution identifiers to bind the service to.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function bindContribution(bindable: Bindable, service: interfaces.ServiceIdentifier<any>, contributions: interfaces.ServiceIdentifier<any>[]): void {
+    const bind: interfaces.Bind = Bindable.isContainer(bindable) ? bindable.bind.bind(bindable) : bindable;
+    for (const contribution of contributions) {
+        bind(contribution).toService(service);
+    }
 }

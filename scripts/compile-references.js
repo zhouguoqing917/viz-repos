@@ -20,7 +20,7 @@ for (const [packageName, yarnWorkspace] of Object.entries(YARN_WORKSPACES)) {
 }
 
 /** @type {YarnWorkspace} */
-const THEIA_MONOREPO = {
+const VIZ_MONOREPO = {
     name: '@viz/monorepo',
     workspaceDependencies: Object.keys(YARN_WORKSPACES),
     location: ROOT,
@@ -33,7 +33,7 @@ try {
     // Configure all `compile.tsconfig.json` files of this monorepo
     for (const packageName of Object.keys(YARN_WORKSPACES)) {
         const workspacePackage = YARN_WORKSPACES[packageName];
-        const tsconfigCompilePath = path.join(ROOT, workspacePackage.location, 'compile.tsconfig.json');
+        const tsconfigCompilePath = path.join(ROOT, workspacePackage.location, 'tsconfig.json');
         const references = getTypescriptReferences(workspacePackage);
         result = configureTypeScriptCompilation(workspacePackage, tsconfigCompilePath, references);
         rewriteRequired = rewriteRequired || result;
@@ -42,13 +42,13 @@ try {
     // Configure our root compilation configuration, living inside `configs/root-compilation.tsconfig.json`.
     const configsFolder = path.join(ROOT, 'configs');
     const tsconfigCompilePath = path.join(configsFolder, 'root-compilation.tsconfig.json');
-    const references = getTypescriptReferences(THEIA_MONOREPO, configsFolder);
-    result = configureTypeScriptCompilation(THEIA_MONOREPO, tsconfigCompilePath, references);
+    const references = getTypescriptReferences(VIZ_MONOREPO, configsFolder);
+    result = configureTypeScriptCompilation(VIZ_MONOREPO, tsconfigCompilePath, references);
     rewriteRequired = rewriteRequired || result;
 
     // Configure the root `tsconfig.json` for code navigation using `tsserver`.
     const tsconfigNavPath = path.join(ROOT, 'tsconfig.json');
-    result = configureTypeScriptNavigation(THEIA_MONOREPO, tsconfigNavPath);
+    result = configureTypeScriptNavigation(VIZ_MONOREPO, tsconfigNavPath);
     rewriteRequired = rewriteRequired || result;
 
     // CI will be able to tell if references got changed by looking at the exit code.
@@ -76,7 +76,7 @@ function getTypescriptReferences(requestedPackage, overrideLocation) {
     const references = [];
     for (const dependency of requestedPackage.workspaceDependencies || []) {
         const depWorkspace = YARN_WORKSPACES[dependency];
-        const depConfig = path.join(depWorkspace.location, 'compile.tsconfig.json');
+        const depConfig = path.join(depWorkspace.location, 'tsconfig.json');
         if (!fs.existsSync(depConfig)) {
             continue;
         }
@@ -123,7 +123,7 @@ function configureTypeScriptCompilation(targetPackage, tsconfigPath, references)
 
     /** @type {string[]} */
     const tsconfigReferences = references
-        .map(reference => path.join(reference, 'compile.tsconfig.json'));
+        .map(reference => path.join(reference, 'tsconfig.json'));
 
     /** @type {string[]} */
     const currentReferences = (tsconfigJson['references'] || [])
@@ -209,7 +209,7 @@ function configureTypeScriptNavigation(targetPackage, tsconfigPath) {
     /** @type {{ [prefix: string]: string[] }} */
     const currentPaths = tsconfigJson.compilerOptions.paths;
 
-    for (const packageName of THEIA_MONOREPO.workspaceDependencies) {
+    for (const packageName of VIZ_MONOREPO.workspaceDependencies) {
         const depWorkspace = YARN_WORKSPACES[packageName];
 
         /** @type {string} */
@@ -218,18 +218,18 @@ function configureTypeScriptNavigation(targetPackage, tsconfigPath) {
         let mappedFsPath;
 
         const depSrcPath = path.join(depWorkspace.location, 'src');
-        const depConfigPath = path.join(depWorkspace.location, 'compile.tsconfig.json');
+        const depConfigPath = path.join(depWorkspace.location, 'tsconfig.json');
 
         if (fs.existsSync(depConfigPath) && fs.existsSync(depSrcPath)) {
             // If it is a TypeScript dependency, map `lib` imports to our local sources in `src`.
             const depConfigJson = readJsonFile(depConfigPath);
             originalImportPath = `${packageName}/${depConfigJson.compilerOptions.outDir}/*`;
-            mappedFsPath = path.relative(THEIA_MONOREPO.location, path.join(depSrcPath, '*'));
+            mappedFsPath = path.relative(VIZ_MONOREPO.location, path.join(depSrcPath, '*'));
 
         } else {
             // I don't really know what to do here, simply point to our local package root.
             originalImportPath = `${packageName}/*`;
-            mappedFsPath = path.relative(THEIA_MONOREPO.location, path.join(depWorkspace.location, '*'));
+            mappedFsPath = path.relative(VIZ_MONOREPO.location, path.join(depWorkspace.location, '*'));
         }
 
         /** @type {string[] | undefined} */

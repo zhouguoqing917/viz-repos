@@ -1,24 +1,8 @@
-/********************************************************************************
- * Copyright (C) 2017 TypeFox and others.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License v. 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0.
- *
- * This Source Code may also be made available under the following Secondary
- * Licenses when the conditions for such availability set forth in the Eclipse
- * Public License v. 2.0 are satisfied: GNU General Public License, version 2
- * with the GNU Classpath Exception which is available at
- * https://www.gnu.org/software/classpath/license.html.
- *
- * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
- ********************************************************************************/
-
 import * as cp from 'child_process';
 import * as path from 'path';
-import { injectable, inject } from 'inversify';
-import { Trace, IPCMessageReader, IPCMessageWriter, createMessageConnection, MessageConnection, Message } from 'vscode-ws-jsonrpc';
-import { ILogger, ConnectionErrorHandler, DisposableCollection, Disposable } from '../../common';
+import { inject, injectable } from 'inversify';
+import { createMessageConnection, IPCMessageReader, IPCMessageWriter, Message, MessageConnection, Trace } from 'vscode-ws-jsonrpc';
+import { ConnectionErrorHandler, Disposable, DisposableCollection, ILogger } from '../../common';
 import { createIpcEnv } from './ipc-protocol';
 
 export interface ResolvedIPCConnectionOptions {
@@ -73,6 +57,10 @@ export class IPCConnectionProvider {
         acceptor(connection);
         return toStop;
     }
+    private async  traceVerbosity () :Promise<number>{
+        const traceVerbosity =  await this.logger.isDebug() ? Trace.Verbose : Trace.Off;
+        return +(traceVerbosity)
+    }
 
     protected createConnection(childProcess: cp.ChildProcess, options: ResolvedIPCConnectionOptions): MessageConnection {
         const reader = new IPCMessageReader(childProcess);
@@ -83,10 +71,12 @@ export class IPCConnectionProvider {
             info: (message: string) => this.logger.info(`[${options.serverName}: ${childProcess.pid}] ${message}`),
             log: (message: string) => this.logger.info(`[${options.serverName}: ${childProcess.pid}] ${message}`)
         });
-        const traceVerbosity = this.logger.isDebug() ? Trace.Verbose : Trace.Off;
-        connection.trace(traceVerbosity, {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            log: (message: any, data?: string) => this.logger.debug(`[${options.serverName}: ${childProcess.pid}] ${message}` + (typeof data === 'string' ? ' ' + data : ''))
+        
+        this.traceVerbosity().then(traceVerbosity=>{
+            connection.trace(traceVerbosity, {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                log: (message: any, data?: string) => this.logger.debug(`[${options.serverName}: ${childProcess.pid}] ${message}` + (typeof data === 'string' ? ' ' + data : ''))
+            });
         });
         return connection;
     }

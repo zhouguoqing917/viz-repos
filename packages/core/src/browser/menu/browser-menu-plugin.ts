@@ -1,17 +1,12 @@
-/*
- * Copyright (C) 2017 TypeFox and others.
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- */
 
 import { inject, injectable } from "inversify";
 import { MenuBar as MenuBarWidget, Menu as MenuWidget, Widget } from "@phosphor/widgets";
 import { CommandRegistry as PhosphorCommandRegistry } from "@phosphor/commands";
 import {
-    ActionMenuNode, CommandRegistry,
-    CompositeMenuNode, KeybindingRegistry, MAIN_MENU_BAR, MenuModelRegistry
+    ActionMenuNode, CommandRegistry, CompositeMenuNode,
+    MAIN_MENU_BAR, MenuModelRegistry, MenuPath
 } from "../../common";
+import { Keybinding, KeybindingRegistry } from "../keybinding";
 import { FrontendApplication, FrontendApplicationContribution } from "../frontend-application";
 
 @injectable()
@@ -28,7 +23,10 @@ export class BrowserMainMenuFactory {
         menuBar.id = 'theia:menubar';
         const menuModel = this.menuProvider.getMenu(MAIN_MENU_BAR);
         const phosphorCommands = this.createPhosporCommands(menuModel);
-        for (let menu of menuModel.children) {
+        // for the main menu we want all items to be visible.
+        phosphorCommands.isVisible = () => true;
+
+        for (const menu of menuModel.children) {
             if (menu instanceof CompositeMenuNode) {
                 const menuWidget = new DynamicMenuWidget(menu, { commands: phosphorCommands });
                 menuBar.addMenu(menuWidget);
@@ -37,7 +35,7 @@ export class BrowserMainMenuFactory {
         return menuBar;
     }
 
-    createContextMenu(path: string): MenuWidget {
+    createContextMenu(path: MenuPath): MenuWidget {
         const menuModel = this.menuProvider.getMenu(path);
         const phosphorCommands = this.createPhosporCommands(menuModel);
 
@@ -45,69 +43,64 @@ export class BrowserMainMenuFactory {
         return contextMenu;
     }
 
-    private createPhosporCommands(menu: CompositeMenuNode): PhosphorCommandRegistry {
+    protected createPhosporCommands(menu: CompositeMenuNode): PhosphorCommandRegistry {
         const commands = new PhosphorCommandRegistry();
-        const commandRegistry = this.commandRegistry;
-        const keybindingRegistry = this.keybindingRegistry;
-        function initCommands(current: CompositeMenuNode): void {
-            for (let menu of current.children) {
-                if (menu instanceof ActionMenuNode) {
-                    const command = commandRegistry.getCommand(menu.action.commandId);
-                    if (command) {
-                        const getHandler = (commandId: string) => {
-                            return commandRegistry.getActiveHandler(commandId) || {
-                                execute: () => { },
-                                isEnabled: () => { return false; },
-                                isVisible: () => { return true; }
-                            }
-                        }
-                        commands.addCommand(command.id, {
-                            execute: (e: any) => getHandler(command.id).execute(),
-                            label: menu.label,
-                            icon: command.iconClass,
-                            isEnabled: (e: any) => {
-                                let handler = getHandler(command.id)
-                                return !handler.isEnabled || handler.isEnabled()
-                            },
-                            isVisible: (e: any) => {
-                                let handler = getHandler(command.id)
-                                return !handler.isVisible || handler.isVisible()
-                            }
-                        });
-
-                        const binding = keybindingRegistry.getKeybindingForCommand(command.id);
-                        if (binding) {
-                            const keys = binding.accelerator || [];
-                            commands.addKeyBinding({
-                                command: command.id,
-                                keys,
-                                selector: '.p-Widget' // We have the Phosphor.JS dependency anyway.
-                            });
-                        }
-                    }
-                } else if (menu instanceof CompositeMenuNode) {
-                    initCommands(menu);
-                }
-            }
-        }
-        initCommands(menu);
+        this.addPhosphorCommands(commands, menu);
         return commands;
     }
 
+    protected addPhosphorCommands(commands: PhosphorCommandRegistry, menu: CompositeMenuNode): void {
+        for (const child of menu.children) {
+            if (child instanceof ActionMenuNode) {
+                this.addPhosphorCommand(commands, child);
+            } else if (child instanceof CompositeMenuNode) {
+                this.addPhosphorCommands(commands, child);
+            }
+        }
+    }
 
+    protected addPhosphorCommand(commands: PhosphorCommandRegistry, menu: ActionMenuNode): void {
+        const command = this.commandRegistry.getCommand(menu.action.commandId);
+        if (!command) {
+            return;
+        }
+        commands.addCommand(command.id, {
+            execute: () => this.commandRegistry.executeCommand(command.id),
+            label: menu.label,
+            icon: command.iconClass,
+            isEnabled: () => this.commandRegistry.isEnabled(command.id),
+            isVisible: () => this.commandRegistry.isVisible(command.id),
+            isToggled: () => this.commandRegistry.isToggled(command.id)
+        });
+
+        const bindings = this.keybindingRegistry.getKeybindingsForCommand(command.id);
+
+        /* Only consider the first keybinding. */
+        if (bindings.length > 0) {
+            const binding = bindings[0];
+            const keys = Keybinding.acceleratorFor(binding);
+            commands.addKeyBinding({
+                command: command.id,
+                keys,
+                selector: '.p-Widget' // We have the Phosphor.JS dependency anyway.
+            });
+        }
+    }
 }
+
 class DynamicMenuBarWidget extends MenuBarWidget {
 
     constructor() {
-        super()
+        super();
         // HACK we need to hook in on private method _openChildMenu. Don't do this at home!
         DynamicMenuBarWidget.prototype['_openChildMenu'] = () => {
             if (this.activeMenu instanceof DynamicMenuWidget) {
-                this.activeMenu.aboutToShow()
+                this.activeMenu.aboutToShow();
             }
-            super['_openChildMenu']()
-        }
+            super['_openChildMenu']();
+        };
     }
+
 }
 /**
  * A menu widget that would recompute its items on update
@@ -115,20 +108,31 @@ class DynamicMenuBarWidget extends MenuBarWidget {
 class DynamicMenuWidget extends MenuWidget {
 
     constructor(protected menu: CompositeMenuNode, protected options: MenuWidget.IOptions) {
-        super(options)
+        super(options);
         if (menu.label) {
             this.title.label = menu.label;
         }
-        this.updateSubMenus(this, this.menu, this.options.commands)
+        this.updateSubMenus(this, this.menu, this.options.commands);
     }
 
     public aboutToShow(): void {
-        this.clearItems()
-        this.updateSubMenus(this, this.menu, this.options.commands)
+        this.clearItems();
+        this.updateSubMenus(this, this.menu, this.options.commands);
+    }
+
+    public open(x: number, y: number, options?: MenuWidget.IOpenOptions): void {
+        // we want to restore the focus after the menu closes.
+        const previouslyActive = window.document.activeElement as HTMLElement;
+        const cb = () => {
+            previouslyActive.focus();
+            this.aboutToClose.disconnect(cb);
+        };
+        this.aboutToClose.connect(cb);
+        super.open(x, y, options);
     }
 
     private updateSubMenus(parent: MenuWidget, menu: CompositeMenuNode, commands: PhosphorCommandRegistry): void {
-        for (let item of menu.children) {
+        for (const item of menu.children) {
             if (item instanceof CompositeMenuNode) {
                 if (item.label) {
                     parent.addItem({
@@ -164,9 +168,9 @@ export class BrowserMenuBarContribution implements FrontendApplicationContributi
 
     onStart(app: FrontendApplication): void {
         const logo = this.createLogo();
-        app.shell.addToTopArea(logo);
+        app.shell.addWidget(logo, { area: 'top' });
         const menu = this.factory.createMenuBar();
-        app.shell.addToTopArea(menu);
+        app.shell.addWidget(menu, { area: 'top' });
     }
 
     protected createLogo(): Widget {

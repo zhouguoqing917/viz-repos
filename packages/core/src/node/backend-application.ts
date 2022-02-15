@@ -1,7 +1,6 @@
 import * as path from 'path';
 import * as http from 'http';
-import * as https from 'https';
-import * as express from 'express';
+import * as https from 'https'; 
 import * as yargs from 'yargs';
 import * as fs from 'fs-extra';
 import { inject, injectable, named, postConstruct } from 'inversify';
@@ -10,11 +9,16 @@ import { CliContribution } from './cli';
 import { Deferred } from '../common/promise-util';
 import { environment } from '../common/index';
 import { AddressInfo } from 'net'; 
+import { ProcessUtils } from './process-utils';
+import express from 'express';
+import { ApplicationPackage } from '@viz/application-package';
 
+
+ 
 export const BackendApplicationContribution = Symbol('BackendApplicationContribution');
 export interface BackendApplicationContribution {
-    initialize?(): void;
-    configure?(app: express.Application): void;
+    initialize?(): MaybePromise<void>;
+    configure?(app: express.Application): MaybePromise<void>;
     onStart?(server: http.Server | https.Server): MaybePromise<void>;
 
     /**
@@ -23,6 +27,9 @@ export interface BackendApplicationContribution {
      */
     onStop?(app?: express.Application): void;
 }
+
+export const BackendApplicationServer = Symbol('BackendApplicationServer');
+export interface BackendApplicationServer extends BackendApplicationContribution { }
 
 const defaultPort = environment.electron.is() ? 0 : 3000;
 const defaultHost = 'localhost';
@@ -77,6 +84,12 @@ export class BackendApplicationCliContribution implements CliContribution {
 export class BackendApplication {
 
     protected readonly app: express.Application = express();
+
+    @inject(ApplicationPackage)
+    protected readonly applicationPackage: ApplicationPackage;
+
+    @inject(ProcessUtils)
+    protected readonly processUtils: ProcessUtils;
  
     constructor(
         @inject(ContributionProvider) @named(BackendApplicationContribution)
@@ -93,26 +106,42 @@ export class BackendApplication {
             }
         });
 
+        process.on('SIGPIPE', () => {
+            console.error(new Error('Unexpected SIGPIPE'));
+        });
+         /**
+         * Kill the current process tree on exit.
+         */
+        function signalHandler(signal: NodeJS.Signals): never {
+            process.exit(1);
+        }
+
         // Handles normal process termination.
         process.on('exit', () => this.onStop());
         // Handles `Ctrl+C`.
-        process.on('SIGINT', () => process.exit(0));
+        process.on('SIGINT', () => signalHandler);
         // Handles `kill pid`.
-        process.on('SIGTERM', () => process.exit(0));
+        process.on('SIGTERM', () => signalHandler);
 
+        this.initialize();
+    }
+
+    protected async initialize(): Promise<void> {
         for (const contribution of this.contributionsProvider.getContributions()) {
             if (contribution.initialize) {
                 try {
-                    contribution.initialize();
+                    await this.measure(contribution.constructor.name + '.initialize',
+                        () => contribution.initialize!()
+                    );
                 } catch (error) {
-                    this.logger.error('Could not initialize contribution', error);
+                    console.error('Could not initialize contribution', error);
                 }
             }
         }
     }
 
     @postConstruct()
-    protected init(): void {
+    protected async init(): Promise<void> {
         this.app.get('*.js', this.serveGzipped.bind(this, 'text/javascript'));
         this.app.get('*.js.map', this.serveGzipped.bind(this, 'application/json'));
         this.app.get('*.css', this.serveGzipped.bind(this, 'text/css'));
@@ -124,7 +153,10 @@ export class BackendApplication {
         for (const contribution of this.contributionsProvider.getContributions()) {
             if (contribution.configure) {
                 try {
-                    contribution.configure(this.app);
+               
+                 await this.measure(contribution.constructor.name + '.configure',
+                    () => contribution.configure!(this.app)
+                  );
                 } catch (error) {
                     this.logger.error('Could not configure contribution', error);
                 }
@@ -200,17 +232,20 @@ export class BackendApplication {
         }
         return deferred.promise;
     }
-
+ 
     protected onStop(): void {
+        console.info('>>> Stopping backend contributions...');
         for (const contrib of this.contributionsProvider.getContributions()) {
             if (contrib.onStop) {
                 try {
                     contrib.onStop(this.app);
                 } catch (error) {
-                    this.logger.error('Could not stop contribution', error);
+                    console.error('Could not stop contribution', error);
                 }
             }
         }
+        console.info('<<< All backend contributions have been stopped.'); 
+        this.processUtils.terminateProcessTree(process.pid);
     }
 
     protected appProjectPath(): string {
@@ -238,6 +273,18 @@ export class BackendApplication {
         res.set('Content-Type', contentType);
 
         next();
+    }
+
+    protected async measure<T>(name: string, fn: () => MaybePromise<T>): Promise<T> {
+        const startMark = name + '-start';
+        const endMark = name + '-end';
+        performance.mark(startMark);
+        const result = await fn();
+        performance.mark(endMark);
+        performance.measure(name, startMark, endMark);
+        // Observer should immediately log the measurement, so we can clear it
+        performance.clearMarks(name);
+        return result;
     }
 
 }

@@ -19,18 +19,18 @@ import * as url from 'url';
 import * as net from 'net';
 import * as http from 'http';
 import * as https from 'https';
-import { injectable, inject, named, postConstruct, interfaces, Container } from 'inversify';
+import { Container, inject, injectable, interfaces, named, postConstruct } from 'inversify';
 import { MessageConnection } from 'vscode-ws-jsonrpc';
 import { createWebSocketConnection } from 'vscode-ws-jsonrpc/lib/socket/connection';
 import { IConnection } from 'vscode-ws-jsonrpc/lib/server/connection';
 import * as launch from 'vscode-ws-jsonrpc/lib/server/launch';
-import { ContributionProvider, ConnectionHandler, bindContributionProvider } from '../../common';
+import { bindContributionProvider, ConnectionHandler, ContributionProvider } from '../../common';
 import { WebSocketChannel } from '../../common/messaging/web-socket-channel';
 import { BackendApplicationContribution } from '../backend-application';
 import { MessagingService, WebSocketChannelConnection } from './messaging-service';
 import { ConsoleLogger } from './logger';
 import { ConnectionContainerModule } from './connection-container-module';
-import Route = require('route-parser');
+import Route from 'route-parser';
 import { WsRequestValidator } from '../ws-request-validators';
 import { MessagingListener } from './messaging-listeners';
 import { HttpWebsocketAdapter, HttpWebsocketAdapterFactory } from './http-websocket-adapter';
@@ -171,7 +171,7 @@ export class MessagingContribution implements BackendApplicationContribution, Me
             if (allowed) {
                 this.webSocketServer!.handleUpgrade(request, socket, head, client => {
                     this.webSocketServer!.emit('connection', client, request);
-                    this.messagingListener.onDidWebSocketUpgrade(request, client);
+                    this.messagingListener.onDidWebSocketUpgrade(request, client as any);
                 });
             } else {
                 console.error(`refused a websocket connection: ${request.connection.remoteAddress}`);

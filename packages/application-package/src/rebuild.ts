@@ -1,11 +1,17 @@
- import fs = require('fs-extra');
-import path = require('path');
+import * as   fs from 'fs-extra';
+import * as path  from 'path';
  
+export const DEFAULT_MODULES = [
+    'node-pty',
+    'nsfw',
+    'native-keymap',
+    'find-git-repositories' 
+];
 
 export function rebuild(target: 'electron' | 'browser', modules: string[]): void {
     const nodeModulesPath = path.join(process.cwd(), 'node_modules');
     const browserModulesPath = path.join(process.cwd(), '.browser_modules');
-    const modulesToProcess = modules || ['node-pty', 'nsfw', 'find-git-repositories'];
+    const modulesToProcess = modules || [...DEFAULT_MODULES];
 
     if (target === 'electron' && !fs.existsSync(browserModulesPath)) {
         const dependencies: {

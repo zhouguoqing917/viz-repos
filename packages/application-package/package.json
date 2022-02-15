@@ -14,19 +14,24 @@
   "typings": "lib/index.d.ts",
   "scripts": {
     "prepare": "yarn run clean && yarn run build",
-    "clean": "vizext clean",
-    "build": "vizext build",
-    "watch": "vizext watch",
-    "test": "vizext test",
-    "docs": "vizext docs"
+    "clean": "rimraf lib && rimraf tsconfig.tsbuildinfo",
+    "build": "tsc -b", 
+    "test": "jest",
+    "lint": "eslint --cache=true --no-error-on-unmatched-pattern=true \"{src,test}/**/*.{ts,tsx}\"", 
+    "lint:clean": "rimraf .eslintcache",
+    "docs": "typedoc src",  
+    "test:cov": "jest --collect-coverage", 
+    "test:watch": "npm run test -- --watch",
+    "watch": "tsc -b --watch"
   },
+  
   "dependencies": {
     "@types/fs-extra": "^4.0.2",
     "@types/request": "^2.0.3",
     "@types/semver": "^5.4.0",
     "@types/write-json-file": "^3.2.1", 
     "changes-stream": "^2.2.0", 
-    "electron": "15.3.6",
+    "electron": "9.4.4",
     "electron-rebuild": "^3.2.7", 
     "request": "^2.82.0",  
     "fs-extra": "^4.0.2",
@@ -35,6 +40,6 @@
     "is-electron": "^2.1.0" 
   },
   "devDependencies": {
-    "@viz/build-scripts": "^0.0.1"
+   
   }
 }

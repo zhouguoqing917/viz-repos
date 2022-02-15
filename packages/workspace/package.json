@@ -1,0 +1,43 @@
+{
+  "name": "@viz/workspace",
+  "version": "0.0.1",
+  "description": "Workspace Extension",
+  "dependencies": {
+    "@viz/core": "^0.0.1",
+    "@viz/filesystem": "^0.0.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "theiaExtensions": [
+    {
+      "frontend": "lib/browser/workspace-frontend-module",
+      "backend": "lib/node/workspace-backend-module"
+    }
+  ],
+  "keywords": [ 
+  ],
+  "license": "MIT", 
+  "files": [
+    "lib",
+    "src"
+  ],
+  "scripts": {
+    "prepare": "yarn run clean && yarn run build",
+    "clean": "rimraf lib && rimraf tsconfig.tsbuildinfo",
+    "build": "tsc -b", 
+    "test": "jest",
+    "lint": "eslint --cache=true --no-error-on-unmatched-pattern=true \"{src,test}/**/*.{ts,tsx}\"", 
+    "lint:clean": "rimraf .eslintcache",
+    "docs": "typedoc src",  
+    "test:cov": "jest --collect-coverage", 
+    "test:watch": "npm run test -- --watch",
+    "watch": "tsc -b --watch"
+  },
+  "devDependencies": {
+    "@viz/build-scripts": "^0.0.1"
+  },
+  "nyc": {
+    "extends": "../../configs/nyc.json"
+  }
+}

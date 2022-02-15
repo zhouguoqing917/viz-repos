@@ -5,6 +5,21 @@ import { NodePackage, NpmRegistry, NpmRegistryConfig, PublishedNodePackage, sort
 import { Extension, ExtensionPackage, RawExtensionPackage } from './extension-package';
 import { ExtensionPackageCollector } from './extension-package-collector';
  
+export interface ApplicationConfig {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly [key: string]: any;
+} 
+export interface FrontendApplicationConfig extends ApplicationConfig { 
+    readonly defaultTheme?: string; 
+    readonly applicationName?: string; 
+    readonly disallowReloadKeybinding?: boolean;
+
+} 
+ export interface BackendApplicationConfig extends ApplicationConfig { 
+ 
+    singleInstance?: boolean;
+
+}
 
 export type ApplicationPackageTarget = 'browser' | 'electron';
 export class ApplicationPackageConfig extends NpmRegistryConfig {

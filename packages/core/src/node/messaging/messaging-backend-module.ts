@@ -17,7 +17,7 @@
 import { ContainerModule } from 'inversify';
 import { bindContributionProvider } from '../../common';
 import { BackendApplicationContribution } from '../backend-application';
-import { MessagingContribution, MessagingContainer } from './messaging-contribution';
+import { MessagingContainer, MessagingContribution } from './messaging-contribution';
 import { ConnectionContainerModule } from './connection-container-module';
 import { MessagingService } from './messaging-service';
 import { MessagingListener, MessagingListenerContribution } from './messaging-listeners';
@@ -33,6 +33,7 @@ export const messagingBackendModule = new ContainerModule(bind => {
         return child.get(MessagingService.Identifier);
     }).inSingletonScope();
     bind(BackendApplicationContribution).toService(MessagingContribution);
+    
     bind(MessagingListener).toSelf().inSingletonScope();
     bindContributionProvider(bind, MessagingListenerContribution);
     bind(HttpWebsocketAdapter).toSelf();

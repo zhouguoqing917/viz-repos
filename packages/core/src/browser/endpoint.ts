@@ -1,18 +1,18 @@
-import URI from '../common/uri';
+import URI from "../common/uri";
 
 /**
  * An endpoint provides URLs for http and ws, based on configuration and defaults.
  */
 export class Endpoint {
-    static readonly PROTO_HTTPS: string = 'https:';
-    static readonly PROTO_HTTP: string = 'http:';
-    static readonly PROTO_WS: string = 'ws:';
-    static readonly PROTO_WSS: string = 'wss:';
-    static readonly PROTO_FILE: string = 'file:';
+    static readonly PROTO_HTTPS: string = "https:";
+    static readonly PROTO_HTTP: string = "http:";
+    static readonly PROTO_WS: string = "ws:";
+    static readonly PROTO_WSS: string = "wss:";
+    static readonly PROTO_FILE: string = "file:";
 
     constructor(
         protected readonly options: Endpoint.Options = {},
-        protected readonly location: Endpoint.Location = self.location
+        protected readonly location: Endpoint.Location = window.location
     ) { }
 
     getWebSocketUrl(): URI {
@@ -23,7 +23,7 @@ export class Endpoint {
         return new URI(`${this.httpScheme}//${this.host}${this.pathname}${this.path}`);
     }
 
-    protected get pathname(): string {
+    protected get pathname() {
         if (this.location.protocol === Endpoint.PROTO_FILE) {
             return '';
         }
@@ -36,10 +36,7 @@ export class Endpoint {
         return this.location.pathname;
     }
 
-    get host(): string {
-        if (this.options.host) {
-            return this.options.host;
-        }
+    protected get host() {
         if (this.location.host) {
             return this.location.host;
         }
@@ -63,18 +60,11 @@ export class Endpoint {
             })[0] || defaultValue;
     }
 
-    protected get wsScheme(): string {
-        if (this.options.wsScheme) {
-            return this.options.wsScheme;
-        }
+    protected get wsScheme() {
         return this.httpScheme === Endpoint.PROTO_HTTPS ? Endpoint.PROTO_WSS : Endpoint.PROTO_WS;
     }
 
-    /**
-     * The HTTP/HTTPS scheme of the endpoint, or the user defined one.
-     * See: `Endpoint.Options.httpScheme`.
-     */
-    get httpScheme(): string {
+    protected get httpScheme() {
         if (this.options.httpScheme) {
             return this.options.httpScheme;
         }
@@ -85,15 +75,15 @@ export class Endpoint {
         return Endpoint.PROTO_HTTP;
     }
 
-    protected get path(): string {
+    protected get path() {
         if (this.options.path) {
-            if (this.options.path.startsWith('/')) {
+            if (this.options.path.startsWith("/")) {
                 return this.options.path;
             } else {
                 return '/' + this.options.path;
             }
         }
-        return this.options.path || '';
+        return this.options.path || "";
     }
 }
 

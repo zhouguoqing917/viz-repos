@@ -2,14 +2,14 @@ import 'reflect-metadata';
 import * as path from 'path';
 import { Container, injectable } from "inversify";
 import * as express from 'express';
-import { BackendApplication, BackendApplicationContribution, applicationModule } from "theia-core/lib/application/node";
-import { fileSystemServerModule } from "theia-core/lib/filesystem/node";
-import { messagingModule } from "theia-core/lib/messaging/node";
-import { backendLanguagesModule } from 'theia-core/lib/languages/node';
-import { backendJavaModule } from 'theia-core/lib/java/node';
-import { backendPythonModule } from 'theia-core/lib/python/node';
-import { backendCppModule } from 'theia-core/lib/cpp/node';
-import terminalBackendModule from 'theia-core/lib/terminal/node/terminal-backend-module'
+import { BackendApplication, BackendApplicationContribution, applicationModule } from "@viz/core/lib/application/node";
+import { fileSystemServerModule } from "@viz/core/lib/filesystem/node";
+import { messagingModule } from "@viz/core/lib/messaging/node";
+import { backendLanguagesModule } from '@viz/core/lib/languages/node';
+import { backendJavaModule } from '@viz/core/lib/java/node';
+import { backendPythonModule } from '@viz/core/lib/python/node';
+import { backendCppModule } from '@viz/core/lib/cpp/node';
+import terminalBackendModule from '@viz/core/lib/terminal/node/terminal-backend-module'
 
 // FIXME introduce default error handler contribution
 process.on('uncaughtException', function (err: any) {

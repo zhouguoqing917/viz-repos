@@ -6,8 +6,7 @@ export * from './event';
 export * from './command';
 export * from './menu';
 export * from './selection-service';
-export * from './keys';
-export * from './keybinding';
+export * from '../browser/keybinding';
 export * from './clipboard-service'; // remove
 export * from './selection-service';
 export * from './objects';

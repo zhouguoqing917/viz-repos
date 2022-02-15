@@ -1,6 +1,6 @@
 {
   "extends": "../../configs/base.tsconfig",
-  "include": [],
+  "include": ["src"],
   "compilerOptions": {
     "composite": true
   },

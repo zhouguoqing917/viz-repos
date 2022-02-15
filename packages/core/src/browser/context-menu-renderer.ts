@@ -1,9 +1,4 @@
-/*
- * Copyright (C) 2017 TypeFox and others.
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- */
+import { MenuPath } from "../common/menu";
 
 export type Anchor = MouseEvent | { x: number, y: number };
 
@@ -12,6 +7,33 @@ export function toAnchor(anchor: HTMLElement | { x: number, y: number }): Anchor
 }
 
 export const ContextMenuRenderer = Symbol("ContextMenuRenderer");
-export interface ContextMenuRenderer {
-    render(path: string, anchor: Anchor): void;
+export interface ContextMenuRenderer {  
+    render(menuPath: MenuPath, anchor: Anchor, onHide?: () => void): void;
+}
+export interface RenderContextMenuOptions {
+    menuPath: MenuPath
+    anchor: Anchor
+    args?: any[]
+    onHide?: () => void
+}
+export namespace RenderContextMenuOptions {
+    export function resolve(arg: MenuPath | RenderContextMenuOptions, anchor?: Anchor, onHide?: () => void): RenderContextMenuOptions {
+        let menuPath: MenuPath;
+        let args: any[];
+        if (Array.isArray(arg)) {
+            menuPath = arg;
+            args = [anchor!];
+        } else {
+            menuPath = arg.menuPath;
+            anchor = arg.anchor;
+            onHide = arg.onHide;
+            args = arg.args ? [...arg.args, anchor] : [anchor];
+        }
+        return {
+            menuPath,
+            anchor: anchor!,
+            onHide,
+            args
+        };
+    }
 }

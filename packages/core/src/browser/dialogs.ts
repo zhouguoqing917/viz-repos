@@ -1,12 +1,7 @@
-/*
- * Copyright (C) 2017 TypeFox and others.
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- */
 
 import { inject, injectable } from "inversify";
-import { Disposable, Key } from "../common";
+import { Disposable } from "../common";
+import { Key } from "./keys";
 import { BaseWidget, Message, Widget } from './widgets';
 
 @injectable()
@@ -20,6 +15,8 @@ export abstract class AbstractDialog<T> extends BaseWidget {
     protected readonly titleNode: HTMLDivElement;
     protected readonly contentNode: HTMLDivElement;
     protected readonly closeCrossNode: HTMLElement;
+    protected readonly controlPanel: HTMLDivElement;
+    protected readonly errorMessageNode: HTMLDivElement;
 
     protected resolve: undefined | ((value: T) => void);
     protected reject: undefined | ((reason: any) => void);
@@ -31,51 +28,63 @@ export abstract class AbstractDialog<T> extends BaseWidget {
         @inject(DialogProps) protected readonly props: DialogProps
     ) {
         super();
-        this.addClass('dialogBlock');
-
+        this.addClass('dialogOverlay');
         this.toDispose.push(Disposable.create(() => {
             if (this.reject) {
                 Widget.detach(this);
             }
         }));
+        const container = document.createElement("div");
+        container.classList.add('dialogBlock');
+        this.node.appendChild(container);
+
+        const titleContentNode = document.createElement("div");
+        titleContentNode.classList.add('dialogTitle');
+        container.appendChild(titleContentNode);
+
+        this.titleNode = document.createElement("div");
+        this.titleNode.textContent = props.title;
+        titleContentNode.appendChild(this.titleNode);
+
+        this.closeCrossNode = document.createElement("i");
+        this.closeCrossNode.classList.add('fa');
+        this.closeCrossNode.classList.add('fa-times');
+        this.closeCrossNode.classList.add('closeButton');
+        titleContentNode.appendChild(this.closeCrossNode);
 
         this.contentNode = document.createElement("div");
         this.contentNode.classList.add('dialogContent');
-        this.node.appendChild(this.contentNode);
+        container.appendChild(this.contentNode);
 
-        this.titleNode = document.createElement("div");
-        this.titleNode.classList.add('dialogTitle');
-        this.titleNode.textContent = props.title;
-        this.contentNode.appendChild(this.titleNode);
+        this.controlPanel = document.createElement('div');
+        this.controlPanel.classList.add('dialogControl');
+        container.appendChild(this.controlPanel);
 
-        this.closeCrossNode = document.createElement("i");
-        this.closeCrossNode.classList.add('dialogClose');
-        this.closeCrossNode.classList.add('fa');
-        this.closeCrossNode.classList.add('fa-times');
-        this.closeCrossNode.setAttribute('aria-hidden', 'true');
-        this.contentNode.appendChild(this.closeCrossNode);
+        this.errorMessageNode = document.createElement('div');
+        this.errorMessageNode.classList.add('error');
+        this.errorMessageNode.setAttribute('style', 'flex: 2');
+        this.controlPanel.appendChild(this.errorMessageNode);
+
         this.update();
     }
 
-    protected appendCloseButton(text?: string): void {
-        this.contentNode.appendChild(this.createCloseButton(text));
+    protected appendCloseButton(text: string = 'Cancel'): HTMLButtonElement {
+        this.closeButton = this.createButton(text);
+        this.controlPanel.appendChild(this.closeButton);
+        this.closeButton.classList.add('secondary');
+        return this.closeButton;
     }
 
-    protected appendAcceptButton(text?: string): void {
-        this.contentNode.appendChild(this.createAcceptButton(text));
-    }
-
-    protected createCloseButton(text: string = 'Cancel'): HTMLButtonElement {
-        return this.closeButton = this.createButton(text);
-    }
-
-    protected createAcceptButton(text: string = 'OK'): HTMLButtonElement {
-        return this.acceptButton = this.createButton(text);
+    protected appendAcceptButton(text: string = 'OK'): HTMLButtonElement {
+        this.acceptButton = this.createButton(text);
+        this.controlPanel.appendChild(this.acceptButton);
+        this.acceptButton.classList.add('main');
+        return this.acceptButton;
     }
 
     protected createButton(text: string): HTMLButtonElement {
         const button = document.createElement("button");
-        button.classList.add('dialogButton');
+        button.classList.add('theia-button');
         button.textContent = text;
         return button;
     }
@@ -89,8 +98,19 @@ export abstract class AbstractDialog<T> extends BaseWidget {
             this.addAcceptAction(this.acceptButton, 'click');
         }
         this.addCloseAction(this.closeCrossNode, 'click');
-        this.addKeyListener(document.body, Key.ESCAPE, () => this.close());
-        this.addKeyListener(document.body, Key.ENTER, () => this.accept());
+        this.addKeyListener(document.body, Key.ESCAPE, e => this.handleEscape(e));
+        this.addKeyListener(document.body, Key.ENTER, e => this.handleEnter(e));
+    }
+
+    protected handleEscape(event: KeyboardEvent): boolean | void {
+        this.close();
+    }
+
+    protected handleEnter(event: KeyboardEvent): boolean | void {
+        if (event.target instanceof HTMLTextAreaElement) {
+            return false;
+        }
+        this.accept();
     }
 
     protected onActivateRequest(msg: Message): void {
@@ -102,7 +122,7 @@ export abstract class AbstractDialog<T> extends BaseWidget {
 
     open(): Promise<T> {
         if (this.resolve) {
-            return Promise.reject('The dialog is already opened.')
+            return Promise.reject('The dialog is already opened.');
         }
         return new Promise<T>((resolve, reject) => {
             this.resolve = resolve;
@@ -142,14 +162,16 @@ export abstract class AbstractDialog<T> extends BaseWidget {
     isValid(value: T): string {
         return '';
     }
-    protected setErrorMessage(error: string): void {
+
+    protected setErrorMessage(error: string) {
         if (this.acceptButton) {
             this.acceptButton.disabled = !!error;
         }
+        this.errorMessageNode.innerHTML = error;
     }
 
     protected addCloseAction<K extends keyof HTMLElementEventMap>(element: HTMLElement, ...additionalEventTypes: K[]): void {
-        this.addKeyListener(element, Key.ESCAPE, () => this.close(), ...additionalEventTypes);
+        this.addKeyListener(element, Key.ENTER, () => this.close(), ...additionalEventTypes);
     }
 
     protected addAcceptAction<K extends keyof HTMLElementEventMap>(element: HTMLElement, ...additionalEventTypes: K[]): void {
@@ -160,29 +182,41 @@ export abstract class AbstractDialog<T> extends BaseWidget {
 
 @injectable()
 export class ConfirmDialogProps extends DialogProps {
-    readonly msg: string;
+    readonly msg: string | HTMLElement;
     readonly cancel?: string;
     readonly ok?: string;
 }
 
-
-export class ConfirmDialog extends AbstractDialog<void> {
+export class ConfirmDialog extends AbstractDialog<boolean> {
 
     constructor(
         @inject(ConfirmDialogProps) protected readonly props: ConfirmDialogProps
     ) {
         super(props);
 
-        const messageNode = document.createElement("div");
-        messageNode.textContent = props.msg;
-        messageNode.setAttribute('style', 'flex: 1 100%; padding-bottom: calc(var(--theia-ui-padding)*3);');
-        this.contentNode.appendChild(messageNode);
+        this.contentNode.appendChild(this.createMessageNode(this.props.msg));
         this.appendCloseButton(props.cancel);
         this.appendAcceptButton(props.ok);
     }
 
-    get value(): void {
-        return;
+    protected onCloseRequest(msg: Message): void {
+        super.onCloseRequest(msg);
+        this.confirmed = false;
+        this.accept();
+    }
+
+    protected confirmed = true;
+    get value(): boolean {
+        return this.confirmed;
+    }
+
+    protected createMessageNode(msg: string | HTMLElement): HTMLElement {
+        if (typeof msg === 'string') {
+            const messageNode = document.createElement("div");
+            messageNode.textContent = msg;
+            return messageNode;
+        }
+        return msg;
     }
 
 }
@@ -196,7 +230,6 @@ export class SingleTextInputDialogProps extends DialogProps {
 
 export class SingleTextInputDialog extends AbstractDialog<string> {
 
-    protected readonly errorMessageNode: HTMLDivElement;
     protected readonly inputField: HTMLInputElement;
 
     constructor(
@@ -205,18 +238,12 @@ export class SingleTextInputDialog extends AbstractDialog<string> {
         super(props);
 
         this.inputField = document.createElement("input");
-        this.inputField.classList.add('dialogButton');
         this.inputField.type = 'text';
-        this.inputField.setAttribute('style', 'flex: 1 auto;');
+        this.inputField.setAttribute('style', 'flex: 0;');
         this.inputField.value = props.initialValue || '';
         this.contentNode.appendChild(this.inputField);
 
         this.appendAcceptButton(props.confirmButtonLabel);
-
-        this.errorMessageNode = document.createElement("div");
-        this.errorMessageNode.setAttribute('style', 'flex: 1 100%;');
-
-        this.contentNode.appendChild(this.errorMessageNode);
     }
 
     get value(): string {
@@ -238,16 +265,6 @@ export class SingleTextInputDialog extends AbstractDialog<string> {
     protected onActivateRequest(msg: Message): void {
         this.inputField.focus();
         this.inputField.select();
-    }
-
-    protected setErrorMessage(error: string) {
-        super.setErrorMessage(error);
-        if (error) {
-            this.addClass('error');
-        } else {
-            this.removeClass('error');
-        }
-        this.errorMessageNode.innerHTML = error;
     }
 
 }

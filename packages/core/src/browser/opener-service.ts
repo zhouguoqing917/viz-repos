@@ -1,13 +1,6 @@
-/*
- * Copyright (C) 2017 TypeFox and others.
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- */
-
-import { named, injectable, inject } from "inversify";
+import { inject, injectable, named } from "inversify";
 import URI from "../common/uri";
-import { ContributionProvider, Prioritizeable, MaybePromise } from "../common";
+import { ContributionProvider, MaybePromise, Prioritizeable } from "../common";
 
 export interface OpenerOptions {
 }
@@ -34,7 +27,7 @@ export interface OpenHandler {
      * Return a positive number if this handler can open; otherwise it cannot.
      * Never reject.
      *
-     * A returned value indicating a priorify of this handler.
+     * A returned value indicating a priority of this handler.
      */
     canHandle(uri: URI, options?: OpenerOptions): MaybePromise<number>;
     /**
@@ -94,9 +87,13 @@ export class DefaultOpenerService implements OpenerService {
     }
 
     protected async prioritize(uri: URI, options?: OpenerOptions): Promise<OpenHandler[]> {
-        const prioritized = await Prioritizeable.prioritizeAll(this.getHandlers(), handler =>
-            handler.canHandle(uri, options)
-        );
+        const prioritized = await Prioritizeable.prioritizeAll(this.getHandlers(), async handler => {
+            try {
+                return await handler.canHandle(uri, options);
+            } catch {
+                return 0;
+            }
+        });
         return prioritized.map(p => p.value);
     }
 

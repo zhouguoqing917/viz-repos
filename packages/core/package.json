@@ -8,9 +8,6 @@
   "directories": {
     "lib": "lib/"
   }, 
-  "peerDependencies": {
-    "electron": "*"
-  },
   "dependencies": { 
     "@babel/runtime": "^7.14.0", 
     "@phosphor/algorithm": "1.2.0",
@@ -31,15 +28,15 @@
     "@types/lodash.throttle": "^4.1.3",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.11",
-    "@types/react-virtualized": "^9.18.3",
+    "@types/react-virtualized": "^9.21.18",
     "@types/route-parser": "^0.1.1",
     "@types/safer-buffer":"^2.1.0",
     "@types/ws": "^5.1.2",
     "@types/yargs": "^11.1.0",
-    "@primer/octicons-react": "^16.3.1",
+    "@primer/octicons-react": "^9.6.0",
     "@vscode/codicons": "^0.0.27",
-    "ajv": "^6.5.3",
-    "body-parser": "^1.17.2",
+    "ajv": "^6.5.3", 
+    "body-parser": "^1.18.3",
     "cookie": "^0.4.0",
     "es6-promise": "^4.2.4",
     "express": "^4.16.3",
@@ -47,10 +44,11 @@
     "font-awesome": "^4.7.0",
     "fs-extra": "^4.0.2",
     "fuzzy": "^0.1.3",
-    "inversify": "^5.0.1",
+    "inversify": "^5.1.1",
     "lodash.debounce": "^4.0.8",
     "lodash.throttle": "^4.1.1", 
     "p-debounce": "^2.1.0",
+    "native-keymap": "^2.1.2",
     "perfect-scrollbar": "^1.3.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
@@ -63,9 +61,19 @@
     "iconv-lite":"^0.6.3", 
     "uuid": "^8.3.2",
     "vscode-languageserver-protocol": "~3.15.3",
+    "vscode-languageserver-types": "^3.15.1",
     "vscode-uri": "^2.1.1",
     "vscode-ws-jsonrpc": "^0.2.0",
+    "dompurify":"^2.2.9",
+    "nsfw":"^2.1.2",
+    "markdown-it":"^12.3.2",
+    "electron": "9.4.4",  
+    "electron-store": "^5.1.1",
+    "fix-path": "^3.0.0", 
+    "node-gyp": "^7.0.0",
+    "unzipper": "^0.9.11",  
     "ws": "^7.1.2",
+    "@viz/application-package":"0.0.1",
     "yargs": "^15.3.1"
   },
   "publishConfig": {
@@ -80,27 +88,55 @@
     "lib",
     "src"
   ],
-  "scripts": {  
-    "compile": "tsc -b", 
-    "build": "yarn compile && yarn bundle", 
+  "scripts": {   
+    "compile": "tsc -b --verbose", 
+    "compile:fast": "tsc -p",
+    "build": "yarn compile", 
     "build:test": "tsc --build tsconfig.test.json",
-    "clean": "rimraf lib && rimraf tsconfig.tsbuildinfo",
+    "clean": "rimraf lib && rimraf *.tsbuildinfo",
     "clean:test": "rimraf tests/build",
-    "lint": "lerna run lint",
+    "lint": "eslint --cache=true --no-error-on-unmatched-pattern=true \"{src,test}/**/*.{ts,tsx}\"", 
     "lint:clean": "rimraf .eslintcache",
     "docs": "typedoc src",
     "test": "jest",
     "test:cov": "jest --collect-coverage",
     "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
     "test:debug:watch": "node --inspect-brk node_modules/.bin/jest --runInBand --watch",
-    "watch": "tsc -b --watch"
-
+    "watch": "tsc -b --watch" ,
+    "watch:slow": "tsc -b tsconfig.json -w",
+    "test:mocha": "nyc mocha --opts ../../configs/mocha.opts \"./lib/**/*.*spec.js\""
   },
   "devDependencies": { 
-    "minimist": "^1.2.5",
-    "electron": "15.3.6",
+    "minimist": "^1.2.5", 
     "@viz/build-scripts": "^0.0.1"
   },
+  "extensions": [
+    {
+      "frontend": "lib/browser/i18n/i18n-frontend-module",
+      "backend": "lib/node/i18n/i18n-backend-module"
+    },
+    {
+      "frontend": "lib/browser/menu/browser-menu-module",
+      "frontendElectron": "lib/electron-browser/menu/electron-menu-module"
+    },
+    {
+      "frontend": "lib/browser/window/browser-window-module",
+      "frontendElectron": "lib/electron-browser/window/electron-window-module"
+    },
+    {
+      "frontend": "lib/browser/keyboard/browser-keyboard-module",
+      "frontendElectron": "lib/electron-browser/keyboard/electron-keyboard-module",
+      "backendElectron": "lib/electron-node/keyboard/electron-backend-keyboard-module"
+    },
+    {
+      "frontendElectron": "lib/electron-browser/token/electron-token-frontend-module",
+      "backendElectron": "lib/electron-node/token/electron-token-backend-module"
+    },
+    {
+      "backend": "lib/node/hosting/backend-hosting-module",
+      "backendElectron": "lib/electron-node/hosting/electron-backend-hosting-module"
+    }
+  ],
   "nyc": {
     "extends": "../../configs/nyc.json"
   }
